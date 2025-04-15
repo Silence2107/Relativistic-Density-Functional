@@ -84,7 +84,7 @@ def main():
     guess_gap = args.guess_gap
     quess_q_bar_q = 0.2 * q_bar_q_vac
     confirmed_SC = False
-    for mu_b_ef in mu_b_ef_selection:
+    for count, mu_b_ef in enumerate(mu_b_ef_selection):
         # in terms of optimized mu_q, we must require mu_q = -mu_e for beta equilibrium
         # and n_e = 2/3 * n_u - 1/3 * n_d for charge neutrality
         def neutr_eq(mu_q):
@@ -96,7 +96,7 @@ def main():
             eff_chempots[u_index] = mu_ef_u
             eff_chempots[d_index] = mu_ef_d
 
-            opt_vals, errs = rdf.solve_eos_equations(eff_chempots, vacuum_properties,
+            opt_vals, errs, term_message = rdf.solve_eos_equations(eff_chempots, vacuum_properties,
                                                      coupling_renorm_scale, bare_mass, guess_gap, quess_q_bar_q, args.rel_tol, confirmed_SC)
             gap, q_bar_q = opt_vals
             if np.abs(q_bar_q) < 0.8 * np.abs(q_bar_q_vac):
@@ -104,11 +104,11 @@ def main():
                 confirmed_SC = True
             # faster optimization for later calls with better gap guess
             guess_gap = np.abs(gap)
-            # print(f"Mu*", eff_chempots, ": Vals", [gap, np.sign(
-            #     q_bar_q) * (np.abs(q_bar_q)) ** (1 / 3)], ", Error", errs)
-            if not args.non_verbose and (np.isnan(opt_vals).sum() != 0 or np.all(np.abs(errs) > args.rel_tol)):
-                print(f"Mu*", eff_chempots, ": Vals", [gap, np.sign(
-                    q_bar_q) * (np.abs(q_bar_q)) ** (1 / 3)], ", Error", errs)
+            # print(f"EoS solving at Mu*", eff_chempots, ": [gap, cond^(1/3)] ->", [gap, np.sign(
+            #     q_bar_q) * (np.abs(q_bar_q)) ** (1 / 3)], ", Error", errs, ", status: ", term_message)
+            if not args.non_verbose and (np.isnan(opt_vals).sum() != 0 or np.any(np.abs(errs) > args.rel_tol)):
+                print(f"Inaccurate EoS solving at Mu*", eff_chempots, "MeV : [gap, cond^(1/3)] ->", [gap, np.sign(
+                    q_bar_q) * (np.abs(q_bar_q)) ** (1 / 3)], "MeV , Error", errs, ", status:", term_message)
 
             energy_density, pressure, n_b, densities, chempots = rdf.resolve_eos(eff_chempots, q_bar_q, gap, vacuum_properties,
                                                                                  coupling_renorm_scale, bare_mass, args.rel_tol)
@@ -136,7 +136,10 @@ def main():
         energy_density, pressure, n_b, densities, chempots, gap, q_bar_q = neutr_eq(mu_q)[
             1]
         if not args.non_verbose:
-            print('Mu ', chempots, ' MeV', sep='')
+            print()
+            print('Concluded iter. ', count + 1, '/', args.num_points, ', Mu ',
+                  chempots, ' MeV', sep='', end='')
+            print()
         # turn to typical units
         print(
             f'{energy_density * mev3_fm3 : 20.10e} {pressure * mev3_fm3 : 20.10e} {n_b * mev3_fm3 : 20.10e} {densities[0] * mev3_fm3 : 20.10e} {densities[1] * mev3_fm3 : 20.10e} {densities[2] * mev3_fm3 : 20.10e} {chempots[0] : 20.10e} {chempots[1] : 20.10e} {chempots[2] : 20.10e} {gap : 20.10e} {np.sign(q_bar_q) * (np.abs(q_bar_q)) ** (1 / 3) : 20.10e}', file=outf, flush=True)

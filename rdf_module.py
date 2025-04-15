@@ -247,7 +247,8 @@ def solve_eos_equations(eff_chempots, vacuum_properties : VacuumProperties, coup
             return res / (-q_bar_q_vac)
         return np.array([eq1(), eq2()])
 
-    best_selection = [np.zeros((2)), np.ones((2))]
+    # root, function residue, termination message
+    best_selection = [np.zeros((2)), np.ones((2)), "Unoptimized"]
 
     condensate_guesses = [guess_q_bar_q, vacuum_properties.q_bar_q_vac]
     if confirmed_SC:
@@ -261,7 +262,7 @@ def solve_eos_equations(eff_chempots, vacuum_properties : VacuumProperties, coup
                 res.x[1], coupling_renorm_scale, vacuum_properties, rel_tol, 'ps')
             eff_mass = bare_mass - 2 * g_ps * res.x[1]
             if sum(res.fun ** 2) < sum(best_selection[1] ** 2) and np.isnan(res.x).sum() == 0 and eff_mass > 0:
-                best_selection = [res.x, res.fun]
+                best_selection = [res.x, res.fun, res.message]
                 if np.all(np.abs(best_selection[1]) < rel_tol):
                     break
     return best_selection
